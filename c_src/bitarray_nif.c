@@ -69,8 +69,6 @@ static ERL_NIF_TERM bitarray_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	bitarray * bits;
 	ERL_NIF_TERM ret;
 
-	if (argc != 1)
-		return enif_make_badarg(env);
 	if (!enif_get_uint(env, argv[0], &size))
 		return enif_make_badarg(env);
 
@@ -103,8 +101,6 @@ static ERL_NIF_TERM bitarray_sub(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	bitarray * bits;
 	char * set;
 
-	if (argc != 2)
-		return enif_make_badarg(env);
 	if (!enif_get_resource(env, argv[0], BITARRAY, (void**) &bits))
 		return enif_make_badarg(env);
 	if (!enif_get_uint(env, argv[1], &pos))
@@ -133,8 +129,6 @@ static ERL_NIF_TERM bitarray_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 	bitarray * bits;
 	char * set;
 
-	if (argc != 3)
-		return enif_make_badarg(env);
 	if (!enif_get_resource(env, argv[0], BITARRAY, (void**) &bits))
 		return enif_make_badarg(env);
 	if (!enif_get_uint(env, argv[1], &pos))
