@@ -1,0 +1,5 @@
+{application, bitarray, [
+ {description, "NIF library to replace hipe_bifs:bitarray* functions"},
+ {vsn, "0.1"},
+ {applications, [kernel, stdlib]}
+]}.

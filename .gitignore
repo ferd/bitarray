@@ -1,0 +1,12 @@
+/ebin
+/deps
+/logs/*
+/log
+.DS_Store
+/test/*.beam
+/priv
+*.o
+*.swp
+*.swo
+*.beam
+erl_crash.dump
