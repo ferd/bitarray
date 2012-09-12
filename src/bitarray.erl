@@ -12,15 +12,9 @@ init() ->
 
 new(_) -> exit(nif_not_loaded).
 
-new(Count, true) ->
-    init(new(Count), Count);
-new(Count, false) ->
-    new(Count).
+new(_,_) -> exit(nif_not_loaded).
 
 sub(_,_) -> exit(nif_not_loaded).
 
 update(_,_,_) -> exit(nif_not_loaded).
 
-%%% PRIVATE
-init(Arr, 0) -> Arr;
-init(Arr, N) -> init(update(Arr, N-1, true), N-1).

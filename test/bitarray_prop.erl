@@ -37,6 +37,14 @@ prop_update_seq() ->
                 true
             end).
 
+%% The bitarray is properly instantiated
+prop_init() ->
+    ?FORALL({Bool, Size, Arr}, init_gen(),
+            lists:all(
+            fun(X) -> X =:= Bool end,
+            [bitarray:sub(Arr, N) || N <- lists:seq(0, Size-1)]
+            )).
+
 %%% GENERATORS
 bitarray() -> bitarray(false).
 
@@ -45,3 +53,6 @@ bitarray(Init) ->
 
 update_seq() ->
     vector(15, boolean()).
+
+init_gen() ->
+    ?LET({Val,N}, {boolean(), pos_integer()}, {Val, N, bitarray:new(N, Val)}).

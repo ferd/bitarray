@@ -1,7 +1,5 @@
 #include "erl_nif.h"
 
-#define BITARRAY_ALIGN 8
-
 typedef struct {
 	unsigned size;
 	char *set;
@@ -66,6 +64,7 @@ static void unload(ErlNifEnv* env, void* priv) {
 // Docs: http://erlang.org/doc/man/erl_nif.html#ErlNifFunc
 static ERL_NIF_TERM bitarray_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 	unsigned size, cells, i;
+	char bytemask;
 	bitarray * bits;
 	ERL_NIF_TERM ret;
 
@@ -73,20 +72,25 @@ static ERL_NIF_TERM bitarray_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 		return enif_make_badarg(env);
 
 	bits = enif_alloc_resource(BITARRAY, sizeof(bitarray));
-	if(bits == NULL)
+	if (bits == NULL)
 		return enif_make_badarg(env);
 	
 	// give the allocation away to Erlang
 	ret = enif_make_resource(env, bits);
 	enif_release_resource(bits);
 
-	cells = (size+BITARRAY_ALIGN-1)/BITARRAY_ALIGN;
+	cells = (size + ((1 << 3) - 1)) >> 3;
 	bits->size = size;
 	bits->set = enif_alloc(sizeof(char)*cells); // manual management for this
 
 	// initialize to 0
+	if (argc == 2 && enif_compare(argv[1], atom_true)==0) {
+		bytemask = ~0;
+	} else {
+		bytemask = 0;
+	}
 	for (i=0; i < cells; i++) {
-		bits->set[i] = 0;
+		bits->set[i] = bytemask;
 	}
 
 	return ret;
@@ -99,7 +103,7 @@ static ERL_NIF_TERM bitarray_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 static ERL_NIF_TERM bitarray_sub(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 	unsigned pos;
 	bitarray * bits;
-	char * set;
+	char bytemask;
 
 	if (!enif_get_resource(env, argv[0], BITARRAY, (void**) &bits))
 		return enif_make_badarg(env);
@@ -108,12 +112,11 @@ static ERL_NIF_TERM bitarray_sub(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	if (pos >= bits->size)
 		return enif_make_badarg(env);
 	
-	set = bits->set;
-	set += pos / BITARRAY_ALIGN;
-	if ((*set & (1 << (pos % BITARRAY_ALIGN))) != 0) {
-		return atom_true;
-	} else {
+	bytemask = 1 << (pos & ((1 << 3) - 1));
+	if ((bits->set[pos >> 3] & bytemask) == 0) {
 		return atom_false;
+	} else {
+		return atom_true;
 	}
 }
 
@@ -125,27 +128,26 @@ static ERL_NIF_TERM bitarray_sub(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 // - true|false: atom, value to switch to.
 static ERL_NIF_TERM bitarray_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 	unsigned pos;
+	char bytemask;
 	ERL_NIF_TERM val;
 	bitarray * bits;
-	char * set;
 
+	if (argc != 3)
+		return enif_make_badarg(env);
 	if (!enif_get_resource(env, argv[0], BITARRAY, (void**) &bits))
 		return enif_make_badarg(env);
 	if (!enif_get_uint(env, argv[1], &pos))
-		return enif_make_badarg(env);
-	if (!enif_is_atom(env, argv[2]))
 		return enif_make_badarg(env);
 	if (pos >= bits->size)
 		return enif_make_badarg(env);
 
 	val = argv[2];
-	set = bits->set;
-	set += pos / BITARRAY_ALIGN;
+	bytemask = 1 << (pos & ((1 << 3) -1));
 	if (enif_compare(val, atom_true)==0) {
-		*set |= 1 << (pos % BITARRAY_ALIGN); // set the bit
+		bits->set[pos >> 3] |= bytemask;
 	} else if (enif_compare(val, atom_false)==0) {
-		*set &= ~(1 << (pos % BITARRAY_ALIGN)); // clear the bit
-	} else { // not an atom
+		bits->set[pos >> 3] &= ~bytemask;
+	} else {
 		return enif_make_badarg(env);
 	}
 	return argv[0];
@@ -153,6 +155,7 @@ static ERL_NIF_TERM bitarray_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 
 static ErlNifFunc nif_funcs[] = {
 	{"new", 1, bitarray_new},
+	{"new", 2, bitarray_new},
 	{"sub", 2, bitarray_sub},
 	{"update", 3, bitarray_update}
 };
